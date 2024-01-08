@@ -18,6 +18,7 @@ import gc
 import machine
 import micropython
 import steplogger
+import datetime
 import sys
 import watch
 import widgets
@@ -113,6 +114,8 @@ class Manager():
         self.notifications = {}
         self.musicstate = {}
         self.musicinfo = {}
+        self.time_last_pressed = 0
+        self.pending_long_press = False
         self.weatherinfo = {}
         self.units = "Metric"
 
@@ -323,6 +326,10 @@ class Manager():
             else:
                 self.sleep()
 
+    def log_time(self):
+        with open('logs/time.txt', 'a') as f:
+            f.write(str(datetime.datetime.now()) + '\n')
+            print("Writing log")
     def notify(self, id, msg):
         self.notifications[id] = msg
 
@@ -419,9 +426,25 @@ class Manager():
             if not self.app.press(EventType.HOME, state):
                 # If app reported None or False then we are done
                 return
-
+        
         if state:
-            self.navigate(EventType.HOME)
+            # Button is pressed
+            if not self.pending_long_press:
+                # Pressed for the first time
+                self.time_last_pressed = watch.rtc.get_uptime_ms()
+                self.pending_long_press = True
+        if not state:
+            # Button is not pressed
+            if self.pending_long_press:
+                # Button just released
+                time_now = watch.rtc.get_uptime_ms()
+                if time_now - self.time_last_pressed > 500:
+                    print("LONG PRESS")
+                    self.log_time()
+                else:
+                    print("SHORT PRESS")
+                    self.navigate(EventType.HOME)
+                self.pending_long_press = False
 
     def _handle_touch(self, event):
         """Process a touch event.

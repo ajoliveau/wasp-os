@@ -18,7 +18,6 @@ import gc
 import machine
 import micropython
 import steplogger
-import datetime
 import sys
 import watch
 import widgets
@@ -327,9 +326,19 @@ class Manager():
                 self.sleep()
 
     def log_time(self):
+        
+        try:
+            os.mkdir('logs')
+        except:
+            pass
         with open('logs/time.txt', 'a') as f:
-            f.write(str(datetime.datetime.now()) + '\n')
             print("Writing log")
+            now = watch.rtc.get_localtime()
+            millis = watch.rtc.get_uptime_ms() % 1000
+            date = "{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.{:03d}".format(now[0], now[1], now[2], now[3], now[4], now[5], millis)
+            print(date)
+            f.write(date + '\n')
+
     def notify(self, id, msg):
         self.notifications[id] = msg
 
